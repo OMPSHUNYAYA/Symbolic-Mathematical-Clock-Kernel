@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>clockke — Shunyaya Symbolic Mathematical Clock Kernel</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #0b0c0f;
+      color: #e8e9ed;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+    }
+    .wrap {
+      max-width: 1080px;
+      margin: 24px auto 16px auto;
+      padding: 0 16px;
+    }
+    .card {
+      background: #151722;
+      border: 1px solid #272a38;
+      border-radius: 14px;
+      padding: 16px 18px 18px 18px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+    h1 { margin: 0; font-size: 22px; letter-spacing: 0.5px; }
+    .muted { color: #a9adbc; font-size: 13px; }
+    h2 { margin: 12px 0 8px 0; font-size: 16px; }
+
+    .row {
+      display: flex; flex-wrap: wrap;
+      align-items: center; gap: 10px; margin-top: 8px;
+    }
+    label { font-weight:600; font-size:13px; margin-right:4px; }
+
+    select, input[type="number"], input[type="text"], input[type="range"] {
+      font-family: inherit; font-size: 13px;
+      padding: 6px 8px; border-radius: 10px;
+      border: 1px solid #272a38;
+      background: #0f1117; color: #e8e9ed;
+      box-sizing: border-box;
+      min-width: 80px;
+    }
+    input[type="range"] { width:180px; margin:0 4px; }
+
+    .btn {
+      border-radius:999px; border:1px solid #344f7c;
+      background:#29539b; color:#e8e9ed;
+      padding:6px 14px; font-size:13px;
+      cursor:pointer; font-weight:600;
+      box-shadow:0 4px 12px rgba(0,0,0,0.3);
+      transition:transform 0.05s ease-out;
+    }
+    .btn.secondary {
+      background:#22263a; border-color:#3a3d52;
+      box-shadow:0 2px 6px rgba(0,0,0,0.25);
+    }
+    .btn:active { transform:translateY(1px); }
+    .btn:disabled { opacity:0.5; cursor:default; }
+
+    .pill {
+      display:inline-block; padding:3px 10px;
+      border-radius:999px; font-size:12px;
+      border:1px solid #3a3d52; background:#10121b;
+      margin-top:6px;
+    }
+
+    .metrics {
+      margin-top:10px;
+      font-family:Consolas,"Courier New",monospace;
+      font-size:13px;
+    }
+    .metrics div { margin-bottom:3px; }
+
+    .band-good { color:#6cf29f; }
+    .band-mid  { color:#ffd966; }
+    .band-weak { color:#ffae5c; }
+    .band-bad  { color:#ff7a7a; }
+
+    .dt-good { color:#6cf29f; }
+    .dt-mid  { color:#ffd966; }
+    .dt-bad  { color:#ff7a7a; }
+
+    /* main alignment bar (slightly thinner) */
+    .bar-outer {
+      margin-top:8px; width:100%; max-width:420px;
+      height:10px; border-radius:999px;
+      background:#10121b; border:1px solid #2e3344;
+      overflow:hidden; position:relative;
+    }
+    .bar-inner {
+      position:absolute; top:0; height:100%;
+      width:0%; left:50%; transform-origin:center left;
+      background:#29539b; transform:scaleX(0);
+    }
+    .bar-zero-line {
+      position:absolute; top:0; bottom:0; width:1px;
+      background:#4b4f60; left:50%;
+    }
+
+    /* history bar */
+    .hist-label {
+      margin-top:8px;
+      font-size:12px;
+      opacity:0.85;
+    }
+
+    .hist-bar {
+      margin-top:4px;
+      width:100%; max-width:420px;
+      height:10px; border-radius:999px;
+      background:#1a1d28; border:1px solid #2e3344;
+      overflow:hidden; display:flex;
+    }
+    .hist-seg {
+      flex:1; height:10px; border-radius:0;
+      transition:background 0.15s linear;
+    }
+
+    .footer-note {
+      max-width:1080px; margin:0 auto 20px auto;
+      padding:0 16px; text-align:right;
+      font-size:11px; color:#808497;
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="card">
+
+    <div class="top-row">
+      <h1>clockke</h1>
+    </div>
+
+    <div class="muted" style="margin-top:4px">
+      Browser engine v2.1 (real-entropy kernel).  
+      Each tick computes: U,W → a_out, with tamper-evident stamps.
+    </div>
+
+    <h2>Controls</h2>
+    <div class="row">
+      <label for="tickMs">tick_ms</label>
+      <select id="tickMs">
+        <option value="250">250</option>
+        <option value="500">500</option>
+        <option value="1000" selected>1000</option>
+        <option value="2000">2000</option>
+      </select>
+
+      <label for="stress">stress</label>
+      <input id="stress" type="range" min="-0.050" max="0.050" step="0.001" value="0.000" />
+      <span id="stressVal" class="muted small">0.000</span>
+
+      <label for="autoStop">auto_stop_ticks</label>
+      <input id="autoStop" type="number" min="0" step="10" value="300" />
+    </div>
+
+    <div class="row">
+      <label for="manifestId">manifest_id</label>
+      <input id="manifestId" type="text" style="min-width:180px" value="CLOCKKE_WEB_v2_1" />
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <button id="btnStart" class="btn">Start</button>
+      <button id="btnStop" class="btn secondary">Stop</button>
+      <button id="btnVerify" class="btn secondary">Verify chain</button>
+      <button id="btnExport" class="btn secondary">Export CSV</button>
+      <button id="btnClear" class="btn secondary">Clear</button>
+      <button id="btnDefaults" class="btn secondary">Restore defaults</button>
+    </div>
+
+    <div id="status" class="pill">idle</div>
+
+    <h2 style="margin-top:14px">Live symbolic time</h2>
+    <div class="metrics">
+      <div id="mUtc">UTC: -</div>
+      <div id="mAlign">final_align: -</div>
+      <div id="mBand">band: -</div>
+      <div id="mTick">ticks: 0</div>
+      <div id="mDt">last dt_ms: -</div>
+      <div id="mStamp">stamp_tail: -</div>
+    </div>
+
+    <div class="hist-label">recent drift (a_out)</div>
+    <div class="bar-outer">
+      <div class="bar-zero-line"></div>
+      <div id="barInner" class="bar-inner"></div>
+    </div>
+
+    <div class="hist-label">drift direction</div>
+    <div id="histBar" class="hist-bar"></div>
+
+  </div>
+</div>
+
+<div class="footer-note">
+  Shunyaya Symbolic Mathematical Clock Kernel (SSM-ClockKe)
+</div>
+
+<script>
+/* ES5 helpers */
+function $(id){ return document.getElementById(id); }
+
+function nowIso(){
+  var d=new Date();
+  if(d.toISOString) return d.toISOString();
+  function pad(n){ return (n<10?"0":"")+n; }
+  return d.getUTCFullYear()+"-"+pad(d.getUTCMonth()+1)+"-"+pad(d.getUTCDate())+
+         "T"+pad(d.getUTCHours())+":"+pad(d.getUTCMinutes())+":"+pad(d.getUTCSeconds())+"Z";
+}
+
+function clamp(x,lo,hi){ x=Number(x); if(x<lo)return lo; if(x>hi)return hi; return x; }
+
+function clockkeHash(s){
+  var h=0,i,c; s=String(s||"");
+  for(i=0;i<s.length;i++){ c=s.charCodeAt(i); h=((h<<5)-h)+c; h|=0; }
+  var hex=(h>>>0).toString(16);
+  while(hex.length<8) hex="0"+hex;
+  return hex;
+}
+
+function makeStamp(prev,payload,time){
+  return clockkeHash(prev+"|"+payload+"|"+time);
+}
+
+var EPS_A=1e-6, EPS_W=1e-9;
+function atanhSafe(x){
+  var lo=-1+EPS_A, hi=1-EPS_A;
+  if(x<lo)x=lo; if(x>hi)x=hi;
+  return 0.5*Math.log((1+x)/(1-x));
+}
+function tanhSafe(y){
+  var e2=Math.exp(2*y);
+  return (e2-1)/(e2+1);
+}
+
+function bandFromAlign(a){
+  if(a>=0.80) return "A+";
+  if(a>=0.40) return "A";
+  if(a>=0.10) return "B";
+  if(a>=-0.10) return "C";
+  return "D";
+}
+
+/* History strip */
+var HISTORY_LEN=24;
+var alignHistory=[];
+function updateHistoryBar(){
+  var bar=$("histBar");
+  while(bar.firstChild) bar.removeChild(bar.firstChild);
+  var i,seg,v,prev;
+  for(i=0;i<alignHistory.length;i++){
+    v=alignHistory[i];
+    seg=document.createElement("div");
+    seg.className="hist-seg";
+    if(i===0){
+      seg.style.background="#444";
+    } else {
+      prev=alignHistory[i-1];
+      if(v>prev+0.001) seg.style.background="#2ecc71";
+      else if(v<prev-0.001) seg.style.background="#e74c3c";
+      else seg.style.background="#f1c40f";
+    }
+    bar.appendChild(seg);
+  }
+}
+
+/* kernel params */
+var BASELINE_A=0.020;
+var JITTER_GAIN=0.150;
+var FREEZE_MULT=1.5;
+var FREEZE_PENALTY=0.050;
+var NOISE_AMPL=0.010;
+var W_DEFAULT=1.0;
+var DECAY_W=0.995;
+
+/* run state */
+var U=0.0, W=0.0, running=false, timerId=null;
+var lastTickTimeMs=null, tickIndex=0, prevStamp="";
+var rows=[];
+var startMs=null;
+
+function updateUiTick(iso,aOut,band,dtMs,stamp){
+  $("mUtc").textContent="UTC: "+iso;
+  $("mAlign").textContent="final_align: "+(aOut>=0?"+":"")+aOut.toFixed(6);
+  $("mBand").textContent="band: "+band;
+  $("mTick").textContent="ticks: "+tickIndex;
+  $("mDt").textContent="last dt_ms: "+(dtMs>=0?dtMs.toFixed(0):"-");
+  $("mStamp").textContent="stamp_tail: "+stamp;
+
+  var bandClass="band-bad";
+  if(band==="A+"||band==="A")bandClass="band-good";
+  else if(band==="B")bandClass="band-mid";
+  else if(band==="C")bandClass="band-weak";
+  $("mBand").className=bandClass;
+
+  var tickMs=Number($("tickMs").value||1000);
+  var ratio=(tickMs>0 && dtMs>=0)?(dtMs/tickMs):1.0;
+  var dtClass="dt-good";
+  if(ratio>1.4)dtClass="dt-bad";
+  else if(ratio>1.1)dtClass="dt-mid";
+  $("mDt").className=dtClass;
+
+  var bar=$("barInner");
+  var a=aOut;
+  if(a<-0.999)a=-0.999;
+  if(a>0.999)a=0.999;
+  var scaleX=Math.abs(a)*2;
+  bar.style.width="50%";
+  bar.style.left="50%";
+  bar.style.transform="scaleX("+scaleX.toFixed(3)+")";
+
+  var barColor="#29539b";
+  if(band==="A+"||band==="A")barColor="#2ecc71";
+  else if(band==="B")barColor="#f1c40f";
+  else if(band==="C")barColor="#e67e22";
+  else if(band==="D")barColor="#e74c3c";
+  bar.style.backgroundColor=barColor;
+}
+
+function tickOnce(){
+  if(!running)return;
+
+  var tickMs=Number($("tickMs").value||1000);
+  var now=new Date();
+  var nowMs=now.getTime();
+  if(startMs===null) startMs=nowMs;
+
+  var iso=nowIso();
+  var dtMs=(lastTickTimeMs!==null? nowMs-lastTickTimeMs : tickMs);
+  lastTickTimeMs=nowMs;
+
+  var stress=Number($("stress").value||0);
+
+  var aSrc=BASELINE_A+stress;
+  if(tickMs>0 && dtMs>=0){
+    var diff=dtMs-tickMs;
+    aSrc -= JITTER_GAIN*(diff/tickMs);
+    if(dtMs>FREEZE_MULT*tickMs){
+      aSrc -= FREEZE_PENALTY;
+    }
+  }
+  aSrc += (Math.random()*2-1)*NOISE_AMPL;
+  aSrc=clamp(aSrc,-1+EPS_A,1-EPS_A);
+
+  var uInc=atanhSafe(aSrc);
+  U=DECAY_W*U + W_DEFAULT*uInc;
+  W=DECAY_W*W + W_DEFAULT;
+  var denom=(W>EPS_W?W:EPS_W);
+  var aOut=tanhSafe(U/denom);
+
+  var band=bandFromAlign(aOut);
+  var aOutStr=aOut.toFixed(9);
+
+  var payload=iso+"|"+aOutStr+"|"+band;
+  var stamp=makeStamp(prevStamp,payload,iso);
+  prevStamp=stamp;
+
+  tickIndex++;
+  var manifestId=String($("manifestId").value||"");
+  rows.push({
+    idx:tickIndex,
+    time_utc:iso,
+    a_src:aSrc,
+    a_out:aOut,
+    a_out_str:aOutStr,
+    band:band,
+    tick_ms:tickMs,
+    dt_ms:dtMs,
+    stress:stress,
+    manifest_id:manifestId,
+    stamp:stamp
+  });
+
+  updateUiTick(iso,aOut,band,dtMs,stamp);
+
+  alignHistory.push(aOut);
+  if(alignHistory.length>HISTORY_LEN) alignHistory.shift();
+  updateHistoryBar();
+
+  var autoStopVal=Number($("autoStop").value||0);
+  if(autoStopVal>0 && tickIndex>=autoStopVal){
+    running=false;
+    clearTimeout(timerId);
+    $("status").textContent="auto-stopped at "+tickIndex+" ticks";
+    return;
+  }
+
+  timerId=setTimeout(tickOnce,tickMs);
+}
+
+function startClock(){
+  if(running)return;
+  running=true;
+  U=0;W=0;
+  lastTickTimeMs=null;
+  tickIndex=0;
+  prevStamp="";
+  rows=[];
+  startMs=null;
+  alignHistory=[];
+  $("status").textContent="running";
+  tickOnce();
+}
+
+function stopClock(){
+  running=false;
+  if(timerId){clearTimeout(timerId); timerId=null;}
+  $("status").textContent="stopped at "+tickIndex+" ticks";
+}
+
+function verifyChain(){
+  if(!rows.length){ alert("No ticks yet."); return; }
+  var ps="", i, r, payload, exp;
+  for(i=0;i<rows.length;i++){
+    r=rows[i];
+    payload=r.time_utc+"|"+r.a_out_str+"|"+r.band;
+    exp=makeStamp(ps,payload,r.time_utc);
+    if(exp!==r.stamp){
+      $("status").textContent="verify failed at tick "+r.idx;
+      alert("FAILED at tick_index="+r.idx);
+      return;
+    }
+    ps=exp;
+  }
+  $("status").textContent="ALL CHECKS PASSED ("+rows.length+" ticks)";
+  alert("ALL CHECKS PASSED\nTicks verified: "+rows.length);
+}
+
+/* CSV download helper (FIXED) */
+function downloadCsv(txt, filename){
+  var blob=new Blob([txt],{type:"text/csv"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");
+  a.href=url;
+  a.download=filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportCsv(){
+  if(!rows.length){ alert("No ticks to export."); return; }
+  var lines=[
+    "tick_index,time_utc,a_src,a_out,band,tick_ms,dt_ms,stress,manifest_id,stamp"
+  ];
+  var i,r;
+  for(i=0;i<rows.length;i++){
+    r=rows[i];
+    lines.push([
+      r.idx,
+      r.time_utc,
+      r.a_src.toFixed(9),
+      r.a_out_str,
+      r.band,
+      r.tick_ms,
+      (r.dt_ms>=0? r.dt_ms.toFixed(0):""),
+      r.stress.toFixed(3),
+      r.manifest_id.replace(/\"/g,"'"),
+      r.stamp
+    ].join(","));
+  }
+  var txt=lines.join("\n");
+  var iso=nowIso().replace(/[^0-9A-Za-z]/g,"");
+  downloadCsv(txt, "stamps_clockke_"+iso+".csv");
+  $("status").textContent="exported CSV ("+rows.length+" ticks)";
+}
+
+function clearState(){
+  running=false;
+  if(timerId){clearTimeout(timerId); timerId=null;}
+  U=0;W=0; lastTickTimeMs=null;
+  tickIndex=0; prevStamp="";
+  rows=[]; startMs=null;
+  alignHistory=[];
+  $("mUtc").textContent="UTC: -";
+  $("mAlign").textContent="final_align: -";
+  $("mBand").textContent="band: -";
+  $("mTick").textContent="ticks: 0";
+  $("mDt").textContent="last dt_ms: -";
+  $("mStamp").textContent="stamp_tail: -";
+  var bar=$("barInner");
+  bar.style.width="0%";
+  bar.style.transform="scaleX(0)";
+  bar.style.backgroundColor="#29539b";
+  $("mBand").className="";
+  $("mDt").className="";
+  var hb=$("histBar");
+  while(hb.firstChild) hb.removeChild(hb.firstChild);
+  $("status").textContent="idle";
+}
+
+function restoreDefaults(){
+  $("tickMs").value="1000";
+  $("stress").value="0.000";
+  $("stressVal").textContent="0.000";
+  $("autoStop").value="300";
+  $("manifestId").value="CLOCKKE_WEB_v2_1";
+  $("status").textContent="defaults restored";
+}
+
+(function(){
+  var st=$("stress"), sv=$("stressVal");
+  st.addEventListener("input",function(){
+    sv.textContent=Number(st.value||0).toFixed(3);
+  },false);
+})();
+
+(function(){
+  $("btnStart").addEventListener("click",startClock,false);
+  $("btnStop").addEventListener("click",stopClock,false);
+  $("btnVerify").addEventListener("click",verifyChain,false);
+  $("btnExport").addEventListener("click",exportCsv,false);
+  $("btnClear").addEventListener("click",clearState,false);
+  $("btnDefaults").addEventListener("click",restoreDefaults,false);
+})();
+</script>
+
+</body>
+</html>
+
