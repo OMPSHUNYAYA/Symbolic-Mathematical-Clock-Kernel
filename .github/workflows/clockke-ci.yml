@@ -2,27 +2,33 @@ name: clockke-ci
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
 
 jobs:
   test-clockke:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.x"
 
-      - name: Run ClockKe CLI and generate ticks
+      - name: Run ClockKe CLI (short CI run)
         run: |
-          python scripts/clockke_run_v2_1.py --tick-sec 0.1 --ticks 20 --out ticks_ci.csv
+          python scripts/clockke_run_v2_1.py --tick-sec 0.1 --ticks 10
 
-      - name: Verify tick chain
+      - name: Prepare CSV for verification
         run: |
-          python scripts/clockke_verify_v2_1.py ticks_ci.csv
+          ls -1
+          latest=$(ls stamps_clockke_cli_*.csv | sort | tail -n 1)
+          cp "$latest" stamps_clockke.csv
+
+      - name: Verify ClockKe chain
+        run: |
+          python scripts/clockke_verify_v2_1.py
