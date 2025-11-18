@@ -1,0 +1,332 @@
+GETTING STARTED
+
+Shunyaya Symbolic Mathematical Clock Kernel (SSM-ClockKe)
+Version. 2.1
+Date. November 18, 2025
+Caution. Research/observation only. Not for critical decision-making.
+
+Goal
+
+Run, observe, and verify symbolic time using the ClockKe kernel — a small, tamper-evident alignment engine that emits:
+
+a_out (bounded alignment lane in -1..+1)
+
+band (A+, A, B, C, D)
+
+dt_ms (actual tick timing)
+
+stamp chain (tamper-evident continuity hash)
+
+ClockKe shows how stable or stressed a periodic signal is, without changing your real-world clock or timing source.
+
+Day-1. Run ClockKe and emit ticks (CLI or browser).
+
+Day-7. Verify continuity using the stamp chain.
+
+Day-30. Use symbolic alignment for drift detection, stability, or teaching purposes.
+
+Prerequisites
+
+Tick source
+
+Any loop, heartbeat, script, timer, or system clock.
+ClockKe only needs a repeating tick — no strict precision required.
+
+UTC clock
+
+Used for the stamp.
+If unavailable, ClockKe will still run, but stamps will be partial.
+
+No manifest required
+
+ClockKe is intentionally simple:
+
+no anchors,
+
+no lenses,
+
+no canonical subset,
+
+no sidecar telemetry.
+
+It emits symbolic time immediately on Day-1.
+
+Day-1 — Emit Minimal ClockKe Ticks
+
+A ClockKe tick produces:
+
+Field	Description
+time_utc	Current UTC timestamp
+dt_ms	Milliseconds since previous tick
+a_out	Bounded alignment lane in (-1, +1)
+band	A+, A, B, C, D (derived from a_out)
+stamp	SHA256(prev_stamp || SHA256(payload) || time_utc)
+
+Typical usage (CLI)
+python clockke_run_v2_1.py --tick-sec 1.0 --ticks 30
+
+Browser version
+
+Open:
+
+clockke_browser.html
+
+Use controls to alter tick duration or stress.
+Observe:
+
+recent drift
+
+history drift direction
+
+a_out bar
+
+stamp tail
+
+Desktop version
+
+python clockke_desktop_v2_1.py
+
+A simple window ticks once per second and shows band + drift.
+
+What ClockKe Computes Per Tick
+
+Jitter analysis
+
+Early/late ticks modify a_src.
+Freeze penalties apply if ticks exceed a threshold (freeze_mult * tick_ms).
+
+Noise
+
+Small synthetic noise adds realistic micro-instability so a_out is never a perfectly flat line.
+
+Decay model
+
+U, W accumulate symbolic stability:
+
+a_c = clamp(a_src, -1+eps_a, +1-eps_a)
+
+u = atanh(a_c)
+
+U = DECAY_W * U + u
+
+W = DECAY_W * W + 1
+
+a_out = tanh(U / max(W, eps_w))
+
+Band selection
+
+Based on a_out (see precise thresholds in Band thresholds below):
+
+A+ / A — stable
+
+B — minor drift
+
+C — visible drift
+
+D — red, high instability
+
+Tamper-evident stamp
+
+stamp_k = SHA256(prev_stamp || SHA256(payload) || time_utc)
+
+This provides replay-safe continuity.
+
+Day-7 — Verify Continuity and Drift
+
+By Day-7, you should verify ClockKe exports using the verifier:
+
+python clockke_verify_v2_1.py exported.csv
+
+The verifier checks:
+
+monotonic timestamps
+
+dt_ms consistency
+
+stamp chain continuity
+
+formatting and field presence
+
+a_out in (-1, +1)
+
+band correctness (recomputed from a_out)
+
+Results:
+
+ALL CHECKS PASSED
+
+or
+
+structured failure report with clear cause (broken chain, malformed field, dt_ms impossible, etc.).
+
+Optional storage / replay
+
+Store each tick as JSON or CSV.
+
+Minimum envelope:
+
+{
+"time_utc": "2025-11-18T05:42:22Z",
+"dt_ms": 1003,
+"a_out": "+0.0251",
+"band": "C",
+"stamp": "692d724e"
+}
+
+This is sufficient for replay and audit.
+
+Day-30 — Use Symbolic Time for Observations
+
+Once familiar with ClockKe’s signals, you may:
+
+Use cases
+
+clock drift experiments
+
+teaching stability and jitter
+
+observing load on a system
+
+demonstrating tamper-evident traces
+
+comparing multiple timing sources
+
+monitoring periodic services
+
+Policies (optional)
+
+Mark records with band = "D" as potential stress.
+
+Track long-term drift via stamp continuity.
+
+Compare dt_ms over long windows (jitter envelope).
+
+Colour-code recent drift / a_out in dashboards.
+
+Evidence bundles (optional)
+
+Advanced users can store:
+
+envelopes.jsonl
+
+hashes.txt
+
+checkpoint.txt
+
+verify.sh
+
+ClockKe does not require this, but supports the workflow.
+
+Reference Snippets
+
+Core kernel equations
+
+a_src = baseline_a + stress
+
+a_src -= jitter_gain * ((dt_ms - tick_ms) / tick_ms)
+
+if dt_ms > freeze_mult * tick_ms: a_src -= freeze_penalty
+
+a_c = clamp(a_src, -1+eps_a, +1-eps_a)
+
+u = atanh(a_c)
+
+U = DECAY_W * U + u
+
+W = DECAY_W * W + 1
+
+a_out = tanh(U / max(W, eps_w))
+
+Stamp shape
+
+SHA256(prev_stamp || SHA256(payload) || time_utc)
+
+Band thresholds (default v2.1 manifest)
+
+Derived directly from a_out:
+
+A+ if a_out >= +0.80
+
+A if a_out >= +0.40
+
+B if a_out >= +0.10
+
+C if a_out >= -0.10
+
+D otherwise
+
+These are the default thresholds used by the v2.1 desktop, CLI, and browser reference implementations. They live in the manifest and can be tuned per deployment. If a project changes its manifest thresholds, band must always be recomputed from a_out using the active manifest, not the example numbers above.
+
+Sparkline visualization (CLI only)
+
+The CLI version includes a compact ASCII sparkline spark_char(a_out) to show recent drift direction. This is a visualization aid only — it does not affect band, a_out, or the stamp chain.
+
+Current v2.1 CLI mapping:
+
+a_out <= -0.40 → 'v' (strong negative / overspeed)
+
+-0.40 < a_out < -0.10 → '/' (mild negative)
+
+-0.10 <= a_out <= +0.10 → '_' (calm / near zero)
+
++0.10 < a_out <= +0.40 → '-' (mild positive stress)
+
+a_out > +0.40 → '^' (high positive stress)
+
+This looser visual scale is intentional: it lets you see small movements in a_out even when the band remains the same (for example, staying in C while the sparkline shifts between '_' and '-').
+
+Troubleshooting
+
+Condition	Treatment
+Broken stamp chain	Mark file as non-evidential; payload still useful for drift analysis.
+dt_ms unrealistic	Check system sleep, load spikes, or browser throttling.
+a_out outside (-1, +1)	Indicates corruption; clamp or discard.
+Band inconsistent	Recompute from a_out; treat mismatch as invalid.
+Missing fields	Treat as non-ClockKe; do not attempt verification.
+
+Wire / Storage Format Guidance
+
+Use plain ASCII keys.
+
+Always store UTC timestamps with trailing "Z".
+
+dt_ms should be integer or fixed-precision decimal.
+
+a_out should include leading sign (for example +0.0123).
+
+Spaces/whitespace do not affect stamp continuity — the stamp is derived from raw concatenation.
+
+Versioning
+
+Increment ClockKe version when:
+
+drift model changes
+
+decay parameters change
+
+stamp construction changes
+
+UI / CSV schema changes
+
+Tick duration (tick_ms) is not part of the version.
+
+Testing Loop
+
+Run ClockKe for ~30 ticks (browser or CLI).
+
+Export CSV.
+
+Run the verifier:
+
+python clockke_verify_v2_1.py my.csv
+
+Expect ALL CHECKS PASSED.
+
+Inspect drift bars for a_out movement.
+
+Repeat with stress or jitter to understand behaviour.
+
+One-Line Takeaway
+
+ClockKe doesn’t replace your clock.
+It shows how stable it is — symbolically, visibly, and with tamper-evident continuity.
