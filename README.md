@@ -8,6 +8,12 @@ SSM-ClockKe is a lightweight, self-auditing time kernel that transforms any peri
 
 ---
 
+**Design FAQ**  
+For common questions about hashing, browser timing, NTP, and distributed use, see  
+[docs/CLOCKKE_FAQ.md](docs/CLOCKKE_FAQ.md)
+
+---
+
 **Key benefits**
 - **Instant clarity from ordinary ticks** — ClockKe converts simple time intervals (`dt_ms`) into a zero-centric alignment lane `a_out` that highlights stability, drift, freeze events, and stress patterns in real time.
 - **No changes to your real clock** — Your actual timestamps remain untouched (`phi((m,a)) = m` by analogy). ClockKe observes jitter and variance without altering the underlying time source.
@@ -22,6 +28,7 @@ SSM-ClockKe is a lightweight, self-auditing time kernel that transforms any peri
 
 ## Quick Links
 - **Docs:** [`docs/SSM-ClockKe_ver2.1.pdf`](docs/SSM-ClockKe_ver2.1.pdf) • [`docs/GETTING_STARTED_SSM-ClockKe.txt`](docs/GETTING_STARTED_SSM-ClockKe.txt) • [`docs/README_PUBLIC_SSM-ClockKe.txt`](docs/README_PUBLIC_SSM-ClockKe.txt)
+- **FAQ:** [`docs/CLOCKKE_FAQ.md`](docs/CLOCKKE_FAQ.md)
 - **Scripts:** [`scripts/clockke_run_v2_1.py`](scripts/clockke_run_v2_1.py) • [`scripts/clockke_desktop_v2_1.py`](scripts/clockke_desktop_v2_1.py) • [`scripts/clockke_verify_v2_1.py`](scripts/clockke_verify_v2_1.py)
 - **Browser:** [`browser/clockke_browser_V2_1.html`](browser/clockke_browser_V2_1.html)
 - **Examples:** (optional) CSV and stamp chains for replay.
@@ -74,7 +81,7 @@ Reordering or deletion becomes visible when verifying the chain.
 
 ---
 
-## Core Kernel (ASCII Summary)## Core Kernel Equations (ASCII)
+## Core Kernel Equations (ASCII)
 
 The ClockKe kernel applies a small symbolic model on every tick.
 
