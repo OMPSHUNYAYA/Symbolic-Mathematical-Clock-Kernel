@@ -1,7 +1,7 @@
 # SSM-ClockKe — Shunyaya Symbolic Mathematical Clock Kernel
 *Turn ordinary system ticks into a visible, zero-centric stability signal.*
 
-![GitHub Stars](https://img.shields.io/github/stars/OMPSHUNYAYA/Symbolic-Mathematical-Clock-Kernel?style=flat&logo=github) ![License](https://img.shields.io/badge/license-Open%20Standard%20%2F%20Open%20Source-brightgreen?style=flat&logo=open-source-initiative)
+![GitHub Stars](https://img.shields.io/github/stars/OMPSHUNYAYA/Symbolic-Mathematical-Clock-Kernel?style=flat&logo=github) ![License](https://img.shields.io/badge/license-Open%20Standard%20%2F%20Open%20Source-brightgreen?style=flat&logo=open-source-initiative) ![CI](https://github.com/OMPSHUNYAYA/Symbolic-Mathematical-Clock-Kernel/actions/workflows/clockke-ci.yml/badge.svg)
 
 **Executive overview**  
 SSM-ClockKe is a lightweight, self-auditing time kernel that transforms any periodic tick — from scripts, timers, or event loops — into a symbolic alignment signal and a tamper-evident continuity chain. It does not replace or modify your real clock; instead, it rides beside your existing timing source to show how stable or stressed it truly is. *Observation-only.*
