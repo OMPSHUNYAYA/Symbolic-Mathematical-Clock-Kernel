@@ -19,6 +19,12 @@ jobs:
         with:
           python-version: "3.x"
 
+      # Ensure all expected folders exist (prevents failures when docs/ is new or empty)
+      - name: Ensure directory structure exists
+        run: |
+          mkdir -p scripts
+          mkdir -p docs
+
       - name: Run ClockKe CLI (short CI run)
         run: |
           python scripts/clockke_run_v2_1.py --tick-sec 0.1 --ticks 10
@@ -31,4 +37,5 @@ jobs:
 
       - name: Verify ClockKe chain
         run: |
-          python scripts/clockke_verify_v2_1.py
+          python scripts/clockke_verify_v2_1.py stamps_clockke.csv
+
