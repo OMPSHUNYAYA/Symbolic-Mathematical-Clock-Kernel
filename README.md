@@ -168,7 +168,7 @@ Linked or referenced standards retain their original licenses.
 SSM-ClockKe, symbolic time, alignment lane, bounded drift, jitter analysis, periodic stability,
 tamper-evident continuity, stamp chain, zero-centric symbolic math, runtime observability,
 evidence-friendly logs, manifest-first design, clock drift studies, teaching stability,
-lightweight time diagnostics, Shunyaya Symbolic Mathematical Clock Kernel.
+lightweight time diagnostics, symbolic-math, Shunyaya Symbolic Mathematical Clock Kernel.
 
 ---
 
